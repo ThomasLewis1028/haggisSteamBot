@@ -10,11 +10,14 @@ var username = properties.username;
 var password = properties.password;
 var profileName = properties.profileName;
 var pcmrGroup = properties.pcmrGroup;
+var haggisTestGroup = properties.haggisTestGroup;
 var steamBotPath = properties.steamBotPath;
+var haggisID = properties.haggisID;
+var botfartID = properties.botfartID;
 
 //Connect to the steam Client with bot user/pass, stored in a private .json file
 steamClient.connect();
-steamClient.on('connected', function(){
+steamClient.on('connected', function () {
 	steamUser.logOn({
 		account_name: username,
 		password: password
@@ -22,79 +25,109 @@ steamClient.on('connected', function(){
 });
 
 //Do stuff when it comes online
-steamClient.on('logOnResponse', function(logonResp){
-	if(logonResp.eresult == Steam.EResult.OK){
+steamClient.on('logOnResponse', function (logonResp) {
+	if (logonResp.eresult == Steam.EResult.OK) {
 		console.log('Logged in!');
 		steamFriends.setPersonaState(Steam.EPersonaState.Online);
 		steamFriends.setPersonaName(profileName);
+		steamFriends.joinChat(haggisTestGroup);
 		steamFriends.joinChat(pcmrGroup);
 	}
 });
 
 //Save Steam servers to a file
-steamClient.on('servers', function(servers){
+steamClient.on('servers', function (servers) {
 	fs.writeFile('servers', JSON.stringify(servers));
 });
 
-//###DO ON MESSAGE###
-steamFriends.on('message',function(serverID, message, type, userID){
-	var user = steamFriends.personaStates[userID].player_name;
+//###DO ON GROUP MESSAGE###
+steamFriends.on('chatmsg', function (serverID, message, type, userID) {
 
-	if(type == 1){
+	var user = steamFriends.personaStates[userID].player_name;
+	var messageArray = message.split(" ");
+
+	if (userID != botfartID && userID != haggisID) {
+		for (i = 0; i < messageArray.length; i++) {
+			if (/H(a|o)(gg|g)is/i.test(messageArray[i])) {
+				sendMessage(haggisID, user + " Pinged you with: " + message);
+			}
+		}
+	}
+
+	if (type == 1) {
 		logChat(serverID, userID, user, getDateTime(), message);
 	}
-	
 });
 
-//###AUTO REJOIN###
-steamFriends.on('chatStateChange', function(stateChange, chatterActedOn, steamIdChat, chatterActedBy) {
-  if (stateChange == Steam.EChatMemberStateChange.Kicked && chatterActedOn == steamClient.steamID) {
-    steamFriends.joinChat(steamIdChat);
-	steamFriends.sendMessage(source, 'fuk u', Steam.EChatEntryType.ChatMsg);
-  }
-});
+// ###DO ON PM###
+steamFriends.on('friendMsg', function (userID, message, type) {
+	if (type == 2) {
+		return;
+	}
 
-//###ACTUALLY NO CLUE WHAT THIS DOES###
-steamFriends.on('clanState', function(clanState) {
-  if (clanState.announcements.length) {
-    console.log('Group with SteamID ' + clanState.steamid_clan + ' has posted ' + clanState.announcements[0].headline);
-  }
-});
+	if (userID == haggisID && /^!rejoin$/i.test(message)) {
+		steamClient.disconnect();
+		steamClient.connect();
+	} else {
+		sendMessage(userID, 'piss off');
+	}
+})
+
+// ###AUTO REJOIN###
+// steamFriends.on('chatStateChange', function (stateChange, chatterActedOn, steamIDChat, chatterActedBy) {
+// 	if (stateChange == Steam.EChatMemberStateChange.Kicked && chatterActedOn == steamClient.steamID) {
+// 		steamFriends.joinChat(steamIDChat);
+// 		steamFriends.sendMessage(steamIDChat, 'don\'t kick me fgot', Steam.EChatEntryType.ChatMsg);
+// 	}
+// });
+
+//###SEND MESSAGES###
+function sendMessage(serverID, message) {
+	steamFriends.sendMessage(serverID, message, Steam.EChatEntryType.ChatMsg);
+}
+
 
 //###LOG CHAT###
-function logChat(serverID, userID, user, time, message){
+function logChat(serverID, userID, user, time, message) {
 	var date = new Date();
 	var yyyy = date.getFullYear();
-	var mm = date.getMonth()+1;
+	var mm = date.getMonth() + 1;
 	mm = (mm < 10 ? "0" : "") + mm;
 	var dd = date.getDate();
 	dd = (dd < 10 ? "0" : "") + dd;
-	
-	var path = steamBotPath+"logs/"
-	var fileName = yyyy+"-"+mm+"-"+dd+".txt"
-	
-	var logContent = yyyy+"-"+mm+"-"+dd+"-"+time+"\r\n"
-	+user+" - "+userID+"\r\n"
-	+"ServerID - "+serverID+"\r\n"
-	+message+"\r\n"
-	+"----------\r\n";
-	
-	fs.appendFileSync(path+fileName, logContent, encoding="utf8");
+
+	var path = steamBotPath + "logs/"
+	var fileName = yyyy + "-" + mm + "-" + dd + ".txt"
+
+	var logContent = yyyy + "-" + mm + "-" + dd + "-" + time + "\r\n"
+		+ user + " - " + userID + "\r\n"
+		+ "ServerID - " + serverID + "\r\n"
+		+ message + "\r\n"
+		+ "----------\r\n";
+
+	fs.appendFileSync(path + fileName, logContent, encoding = "utf8");
 }
 
 //###GET TIME###
-function getDateTime(){
+function getDateTime() {
     var date = new Date();
 
     var hour = date.getHours();
     hour = (hour < 10 ? "0" : "") + hour;
 
-    var min  = date.getMinutes();
+    var min = date.getMinutes();
     min = (min < 10 ? "0" : "") + min;
 
-    var sec  = date.getSeconds();
+    var sec = date.getSeconds();
     sec = (sec < 10 ? "0" : "") + sec;
 
 
     return hour + ":" + min + ":" + sec;
 }
+
+//###ACTUALLY NO CLUE WHAT THIS DOES###
+steamFriends.on('clanState', function (clanState) {
+	if (clanState.announcements.length) {
+		console.log('Group with SteamID ' + clanState.steamid_clan + ' has posted ' + clanState.announcements[0].headline);
+	}
+});
