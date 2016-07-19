@@ -12,8 +12,9 @@ var profileName = properties.profileName;
 var pcmrGroup = properties.pcmrGroup;
 var haggisTestGroup = properties.haggisTestGroup;
 var steamBotPath = properties.steamBotPath;
-var haggisID = properties.haggisID;
-var botfartID = properties.botfartID;
+var haggisSteamID = properties.haggisID;
+var botfartSteamID = properties.botfartID;
+var steamMods = properties.steamMods;
 
 //Connect to the steam Client with bot user/pass, stored in a private .json file
 steamClient.connect();
@@ -31,7 +32,7 @@ steamClient.on('logOnResponse', function (logonResp) {
 		steamFriends.setPersonaState(Steam.EPersonaState.Online);
 		steamFriends.setPersonaName(profileName);
 		steamFriends.joinChat(haggisTestGroup);
-		steamFriends.joinChat(pcmrGroup);
+		//steamFriends.joinChat(pcmrGroup);
 	}
 });
 
@@ -41,35 +42,37 @@ steamClient.on('servers', function (servers) {
 });
 
 //###DO ON GROUP MESSAGE###
-steamFriends.on('chatmsg', function (serverID, message, type, userID) {
+steamFriends.on('chatMsg', function (serverID, message, type, userID) {
+	try {
+		var user = steamFriends.personaStates[userID].player_name;
 
-	var user = steamFriends.personaStates[userID].player_name;
-	var messageArray = message.split(" ");
+		var messageArray = message.split(" ");
 
-	if (userID != botfartID && userID != haggisID) {
-		for (i = 0; i < messageArray.length; i++) {
-			if (/H(a|o)(gg|g)is/i.test(messageArray[i])) {
-				sendMessage(haggisID, user + " Pinged you with: " + message);
+		if (userID != botfartSteamID && userID != haggisSteamID) {
+			for (i = 0; i < messageArray.length; i++) {
+				if (/H(a|o)(gg|g)is/i.test(messageArray[i])) {
+					sendSteamMessage(haggisSteamID, user + " Pinged you with: " + message);
+				}
 			}
 		}
-	}
 
-	if (type == 1) {
-		logChat(serverID, userID, user, getDateTime(), message);
+		logSteamChat(serverID, userID, user, getDateTime(), message);
+	} catch (err) {
+		console.log(err);
 	}
 });
 
-// ###DO ON PM###
+//###DO ON PM###
 steamFriends.on('friendMsg', function (userID, message, type) {
 	if (type == 2) {
 		return;
 	}
 
-	if (userID == haggisID && /^!rejoin$/i.test(message)) {
+	if (userID == haggisSteamID && /^!rejoin$/i.test(message)) {
 		steamClient.disconnect();
 		steamClient.connect();
 	} else {
-		sendMessage(userID, 'piss off');
+		sendSteamMessage(userID, 'piss off');
 	}
 })
 
@@ -82,13 +85,13 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 // });
 
 //###SEND MESSAGES###
-function sendMessage(serverID, message) {
+function sendSteamMessage(serverID, message) {
 	steamFriends.sendMessage(serverID, message, Steam.EChatEntryType.ChatMsg);
 }
 
 
 //###LOG CHAT###
-function logChat(serverID, userID, user, time, message) {
+function logSteamChat(serverID, userID, user, time, message) {
 	var date = new Date();
 	var yyyy = date.getFullYear();
 	var mm = date.getMonth() + 1;
@@ -126,8 +129,8 @@ function getDateTime() {
 }
 
 //###ACTUALLY NO CLUE WHAT THIS DOES###
-steamFriends.on('clanState', function (clanState) {
-	if (clanState.announcements.length) {
-		console.log('Group with SteamID ' + clanState.steamid_clan + ' has posted ' + clanState.announcements[0].headline);
-	}
-});
+// steamFriends.on('clanState', function (clanState) {
+// 	if (clanState.announcements.length) {
+// 		console.log('Group with SteamID ' + clanState.steamid_clan + ' has posted ' + clanState.announcements[0].headline);
+// 	}
+// });
